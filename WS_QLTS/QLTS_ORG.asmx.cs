@@ -35,7 +35,7 @@ namespace WS_QLTS
         [WebMethod]
         public DataTable HR_ORG()
         {
-            string SQL_ORG = "select distinct ORGANIZATION_ID, ORG_NAME_ENG from XVH_EMP_MASTER_IF";
+            string SQL_ORG = "select distinct ORGANIZATION_ID, ORG_NAME_ENG from vhprl.emp_master";
             OracleDataAdapter daORG = new OracleDataAdapter(SQL_ORG, con);
             DataTable dtORG = new DataTable("LGE_ORG");
             DataSet dsORG = new DataSet();
@@ -47,11 +47,11 @@ namespace WS_QLTS
         [WebMethod]
         public DataTable HR_INFOR(string MaNV)
         {
-            string strHuman = "select a.*, b.MOBILE_NUMBER from VHPRL.EMP_MASTER a " +
+            string strHuman = "select a.*, b.MOBILE_NUMBER from vhprl.emp_master a " +
                 "inner join XVH_EMP_INFO_IF b on a.EMPLOYEE_NUMBER = b.EMPLOYEE_NUMBER " +
                 "where a.employee_number = '" + MaNV + "' and b.mobile_number is not null";
 
-            string strHuman2 = "select a.*, b.MOBILE_NUMBER from VHPRL.EMP_MASTER a " +
+            string strHuman2 = "select a.*, b.MOBILE_NUMBER from vhprl.emp_master a " +
                 "inner join XVH_EMP_INFO_IF b on a.EMPLOYEE_NUMBER = b.EMPLOYEE_NUMBER " +
                 "where a.employee_number = '" + MaNV + "'";
 
@@ -74,6 +74,39 @@ namespace WS_QLTS
         }
 
         [WebMethod]
+        public void CheckORGTransfer()
+        {
+            string HR_QLTS = "select ID, ORG_CODE from TB_USER where emp_status = 'EMP'";
+            //string HR_LGE = "select EMPLOYEE_NUMBER, ORGANIZATION_ID from vhprl.emp_master";
+            OracleDataAdapter daHR_QLTS = new OracleDataAdapter(HR_QLTS, connection);
+            DataTable dtHR_QLTS = new DataTable();
+            daHR_QLTS.Fill(dtHR_QLTS);
+
+            foreach(DataRow row in dtHR_QLTS.Rows)
+            {
+                var qltsID = row["ID"].ToString();
+                var qltsORG = row["ORG_CODE"].ToString();
+
+                string lge_organization = "select EMPLOYEE_NUMBER, ORGANIZATION_ID from vhprl.emp_master where employee_number = '" + qltsID + "'";
+                OracleDataAdapter dalge_org = new OracleDataAdapter(lge_organization, con);
+                DataTable dtlge_org = new DataTable();
+                dalge_org.Fill(dtlge_org);
+
+                var lgeORG = dtlge_org.Rows[0]["ORGANIZATION_ID"].ToString();
+                if (lgeORG != qltsORG)
+                {
+                    string updateTransferJob = "update tb_user set org_code = '" + lgeORG + "' where ID = '" + qltsID + "'";
+                    OracleCommand cmdUpdateTransferJob = new OracleCommand(updateTransferJob, updateconnection);
+                    updateconnection.Open();
+                    cmdUpdateTransferJob.ExecuteNonQuery();
+                    updateconnection.Close();
+                }
+                
+            }
+
+        }
+
+        [WebMethod]
         public void CheckResignation()
         {
             CheckNgoaiKho();
@@ -87,7 +120,7 @@ namespace WS_QLTS
             foreach (DataRow row in dtqltsns.Rows)
             {
                 var MNV = row["ID"].ToString();
-                string LGE_STATUS = "select EMPLOYEE_NUMBER, STATUS from VHPRL.EMP_MASTER where EMPLOYEE_NUMBER = '" + MNV + "'";
+                string LGE_STATUS = "select EMPLOYEE_NUMBER, STATUS from vhprl.emp_master where EMPLOYEE_NUMBER = '" + MNV + "'";
 
                 OracleDataAdapter daLGE = new OracleDataAdapter(LGE_STATUS, con);
                 DataTable dtLGE = new DataTable();
